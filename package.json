@@ -1,0 +1,21 @@
+{
+  "name": "saml-tool",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "authn": "bun send-authnrequest.ts",
+    "authn:get": "bun send-authnrequest.ts -b GET",
+    "authn:post": "bun send-authnrequest.ts -b POST",
+    "authn:xml": "bun send-authnrequest.ts -o xml",
+    "receiver": "bun --hot receiver-server.ts",
+    "test": "bun test",
+    "test:receiver": "bun test-receiver.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
