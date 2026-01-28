@@ -16,16 +16,18 @@ const server = Bun.serve({
         try {
           const url = new URL(req.url);
           const samlRequest = url.searchParams.get("SAMLRequest");
+          const samlResponse = url.searchParams.get("SAMLResponse");
           const relayState = url.searchParams.get("RelayState") || undefined;
 
-          if (!samlRequest) {
-            return new Response("No SAMLRequest parameter found", { status: 400 });
+          const samlMessage = samlRequest || samlResponse;
+          if (!samlMessage) {
+            return new Response("No SAMLRequest or SAMLResponse parameter found", { status: 400 });
           }
 
           console.log("\n📨 Received SAML message via GET binding");
           console.log(`   RelayState: ${relayState || "(none)"}`);
 
-          latestMessage = await decodeSAMLMessage(samlRequest, "GET", relayState);
+          latestMessage = await decodeSAMLMessage(samlMessage, "GET", relayState);
 
           console.log(`   Message Type: ${latestMessage.parsed.messageType || "Unknown"}`);
           console.log(`   Issuer: ${latestMessage.parsed.issuer || "Unknown"}`);
@@ -43,16 +45,18 @@ const server = Bun.serve({
         try {
           const formData = await req.formData();
           const samlRequest = formData.get("SAMLRequest") as string;
+          const samlResponse = formData.get("SAMLResponse") as string;
           const relayState = (formData.get("RelayState") as string) || undefined;
 
-          if (!samlRequest) {
-            return new Response("No SAMLRequest parameter found", { status: 400 });
+          const samlMessage = samlRequest || samlResponse;
+          if (!samlMessage) {
+            return new Response("No SAMLRequest or SAMLResponse parameter found", { status: 400 });
           }
 
           console.log("\n📨 Received SAML message via POST binding");
           console.log(`   RelayState: ${relayState || "(none)"}`);
 
-          latestMessage = await decodeSAMLMessage(samlRequest, "POST", relayState);
+          latestMessage = await decodeSAMLMessage(samlMessage, "POST", relayState);
 
           console.log(`   Message Type: ${latestMessage.parsed.messageType || "Unknown"}`);
           console.log(`   Issuer: ${latestMessage.parsed.issuer || "Unknown"}`);
