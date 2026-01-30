@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { parseArgs } from "node:util";
-import { defaultConfig, type SAMLConfig } from "./saml-config";
+import type { SAMLConfig } from "./saml-config";
+import { defaultConfig } from "./.saml-config";
 import {
   buildAuthnRequest,
   encodeForRedirect,

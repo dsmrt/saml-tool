@@ -53,9 +53,11 @@ bun run authn:xml
 
 ### Default Configuration
 
-Edit `saml-config.ts` to change default settings:
+Create a `.saml-config.ts` file (gitignored) for your test site configurations:
 
 ```typescript
+import type { SAMLConfig } from "./saml-config";
+
 export const defaultConfig: SAMLConfig = {
   sp: {
     entityId: "http://localhost:3000/metadata",
@@ -73,6 +75,8 @@ export const defaultConfig: SAMLConfig = {
   },
 };
 ```
+
+The `.saml-config.ts` file is gitignored by default, so you can safely add your test site URLs without committing them to the repository. The `saml-config.ts` file contains only the TypeScript interface definition.
 
 ### Custom Configuration File
 
@@ -220,7 +224,8 @@ bun run authn:xml
 
 ```
 saml-tool/
-├── saml-config.ts          # Configuration types and defaults
+├── saml-config.ts          # Configuration interface (checked in)
+├── .saml-config.ts         # Your config values (gitignored)
 ├── saml-lib.ts             # SAML encoding library (for sending)
 ├── saml-decoder.ts         # SAML decoding library (for receiving)
 ├── send-authnrequest.ts    # CLI tool for sending AuthnRequest

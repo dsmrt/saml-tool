@@ -2,7 +2,7 @@
 // Quick test script to send a SAML message to the receiver and check the API
 
 import { buildAuthnRequest, encodeForPost } from "./saml-lib";
-import { defaultConfig } from "./saml-config";
+import { defaultConfig } from "./.saml-config";
 
 console.log("🧪 Testing SAML Receiver\n");
 

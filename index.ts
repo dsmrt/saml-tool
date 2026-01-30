@@ -1,5 +1,5 @@
 import { buildAuthnRequest, encodeForPost } from "./saml-lib";
-import { defaultConfig } from "./saml-config";
+import { defaultConfig } from "./.saml-config";
 
 console.log("🔐 SAML Testing Tool\n");
 console.log("Use the following commands to test SAML AuthnRequest:\n");

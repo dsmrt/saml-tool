@@ -7,7 +7,7 @@ import {
   buildRedirectUrl,
   buildPostForm,
 } from "./saml-lib";
-import { defaultConfig } from "./saml-config";
+import { defaultConfig } from "./.saml-config";
 
 describe("SAML Library", () => {
   test("generateRequestId creates valid ID", () => {

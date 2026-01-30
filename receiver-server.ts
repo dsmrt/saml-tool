@@ -33,6 +33,30 @@ const server = Bun.serve({
           console.log(`   Issuer: ${latestMessage.parsed.issuer || "Unknown"}`);
           console.log(`   Request ID: ${latestMessage.parsed.id || "Unknown"}`);
 
+          // Log Response-specific information
+          if (latestMessage.parsed.messageType === "Response" && latestMessage.parsed.assertions) {
+            console.log(`\n   🔐 Security Info:`);
+            console.log(`      Response Signed: ${latestMessage.parsed.responseSigned ? "Yes" : "No"}`);
+            console.log(`      Total Assertions: ${latestMessage.parsed.assertions.length}`);
+            console.log(`      Encrypted: ${latestMessage.parsed.assertions.filter(a => a.encrypted).length}`);
+            console.log(`      Signed: ${latestMessage.parsed.assertions.filter(a => a.signed).length}`);
+
+            latestMessage.parsed.assertions.forEach((assertion, idx) => {
+              console.log(`\n   📝 Assertion #${idx + 1}:`);
+              console.log(`      Encrypted: ${assertion.encrypted ? "Yes" : "No"}`);
+              console.log(`      Signed: ${assertion.signed ? "Yes" : "No"}`);
+              if (!assertion.encrypted) {
+                if (assertion.subject) console.log(`      Subject: ${assertion.subject}`);
+                if (assertion.attributes && assertion.attributes.length > 0) {
+                  console.log(`      Attributes (${assertion.attributes.length}):`);
+                  assertion.attributes.forEach(attr => {
+                    console.log(`         - ${attr.name}${attr.friendlyName ? ` (${attr.friendlyName})` : ""}: ${attr.values.join(", ")}`);
+                  });
+                }
+              }
+            });
+          }
+
           // Redirect to the home page to show the decoded message
           return Response.redirect("http://localhost:3000/", 302);
         } catch (error) {
@@ -61,6 +85,30 @@ const server = Bun.serve({
           console.log(`   Message Type: ${latestMessage.parsed.messageType || "Unknown"}`);
           console.log(`   Issuer: ${latestMessage.parsed.issuer || "Unknown"}`);
           console.log(`   Request ID: ${latestMessage.parsed.id || "Unknown"}`);
+
+          // Log Response-specific information
+          if (latestMessage.parsed.messageType === "Response" && latestMessage.parsed.assertions) {
+            console.log(`\n   🔐 Security Info:`);
+            console.log(`      Response Signed: ${latestMessage.parsed.responseSigned ? "Yes" : "No"}`);
+            console.log(`      Total Assertions: ${latestMessage.parsed.assertions.length}`);
+            console.log(`      Encrypted: ${latestMessage.parsed.assertions.filter(a => a.encrypted).length}`);
+            console.log(`      Signed: ${latestMessage.parsed.assertions.filter(a => a.signed).length}`);
+
+            latestMessage.parsed.assertions.forEach((assertion, idx) => {
+              console.log(`\n   📝 Assertion #${idx + 1}:`);
+              console.log(`      Encrypted: ${assertion.encrypted ? "Yes" : "No"}`);
+              console.log(`      Signed: ${assertion.signed ? "Yes" : "No"}`);
+              if (!assertion.encrypted) {
+                if (assertion.subject) console.log(`      Subject: ${assertion.subject}`);
+                if (assertion.attributes && assertion.attributes.length > 0) {
+                  console.log(`      Attributes (${assertion.attributes.length}):`);
+                  assertion.attributes.forEach(attr => {
+                    console.log(`         - ${attr.name}${attr.friendlyName ? ` (${attr.friendlyName})` : ""}: ${attr.values.join(", ")}`);
+                  });
+                }
+              }
+            });
+          }
 
           // Redirect to the home page to show the decoded message
           return Response.redirect("http://localhost:3000/", 302);
