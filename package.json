@@ -8,14 +8,24 @@
     "authn:get": "bun send-authnrequest.ts -b GET",
     "authn:post": "bun send-authnrequest.ts -b POST",
     "authn:xml": "bun send-authnrequest.ts -o xml",
+    "response:init": "bun init-response-config.ts",
+    "response": "bun send-response.ts",
+    "response:xml": "bun send-response.ts -o xml",
+    "metadata": "bun generate-metadata.ts",
+    "metadata:idp": "bun generate-metadata.ts idp",
+    "metadata:sp": "bun generate-metadata.ts sp",
     "receiver": "bun --hot receiver-server.ts",
     "test": "bun test",
     "test:receiver": "bun test-receiver.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "^1.4.4"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.12",
+    "xml-crypto": "^6.4.0"
   }
 }

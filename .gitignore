@@ -35,3 +35,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Local SAML configuration (sensitive test sites)
 .saml-config.ts
+.saml-response-config.ts
+
+# Generated cert/key material for SAML signing
+certs/
+*.pem
