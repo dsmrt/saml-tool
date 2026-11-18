@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/copy-button";
 import { InfoGrid, InfoItem } from "@/components/info-item";
+import { SpResponseCard } from "@/components/sp-response-card";
 import { formatXML } from "@/lib/xml";
 
 const typeBadgeClass: Record<string, string> = {
@@ -62,6 +63,8 @@ export function MessageView({ message }: { message: DecodedSAMLMessage }) {
           </InfoGrid>
         </CardContent>
       </Card>
+
+      {parsed.messageType === "AuthnRequest" && parsed.id && <SpResponseCard requestId={parsed.id} />}
 
       {assertions && (
         <Card>

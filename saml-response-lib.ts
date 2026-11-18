@@ -1,3 +1,5 @@
+import { existsSync, statSync } from "node:fs";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { SignedXml } from "xml-crypto";
 import type {
     SAMLResponseConfig,
@@ -314,4 +316,171 @@ export function buildPostForm(
   </form>
 </body>
 </html>`;
+}
+
+// ---------------------------------------------------------------------------
+// Config loading
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_RESPONSE_CONFIG_PATH = ".saml-response-config.ts";
+
+/**
+ * Load a response config file. Returns a fresh copy on every call (edits to the
+ * file are picked up without restarting), with cert/key paths resolved relative
+ * to the config file.
+ */
+export async function loadResponseConfig(
+    path: string = DEFAULT_RESPONSE_CONFIG_PATH,
+): Promise<SAMLResponseConfig> {
+    const configPath = resolve(path);
+    if (!existsSync(configPath)) {
+        throw new ResponseConfigNotFoundError(configPath);
+    }
+
+    // Bust the module cache when the file changes so edits apply immediately.
+    const mod = await import(`${configPath}?v=${statSync(configPath).mtimeMs}`);
+    const loaded: SAMLResponseConfig | undefined = mod.responseConfig ?? mod.default ?? mod.config;
+    if (!loaded) {
+        throw new Error(`Config file ${configPath} must export 'responseConfig' (or default).`);
+    }
+
+    const config = structuredClone(loaded);
+    const configDir = dirname(configPath);
+    const resolveRel = (p: string | undefined) => (p && !isAbsolute(p) ? resolve(configDir, p) : p);
+    config.idp.certificatePath = resolveRel(config.idp.certificatePath);
+    config.idp.privateKeyPath = resolveRel(config.idp.privateKeyPath);
+    return config;
+}
+
+export class ResponseConfigNotFoundError extends Error {
+    constructor(public readonly path: string) {
+        super(`Config not found at ${path}`);
+        this.name = "ResponseConfigNotFoundError";
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SP-initiated flow: answer a received AuthnRequest
+// ---------------------------------------------------------------------------
+
+const HTTP_POST_BINDING = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST";
+
+export interface ReceivedAuthnRequest {
+    id?: string;
+    issuer?: string;
+    assertionConsumerServiceURL?: string;
+    protocolBinding?: string;
+    relayState?: string;
+}
+
+export type ValueSource = "request" | "config";
+
+export interface SpInitiatedPlan {
+    /** Config with InResponseTo, ACS URL, audience and RelayState filled in from the request. */
+    config: SAMLResponseConfig;
+    acsSource: ValueSource;
+    audienceSource: ValueSource;
+    warnings: string[];
+}
+
+/**
+ * Combine the base response config with the details of a received AuthnRequest.
+ * Values the SP asked for in the request (ACS URL, issuer → audience) take
+ * precedence over the config, the same way an IdP honours the SP's request.
+ */
+export function planSpInitiatedResponse(
+    base: SAMLResponseConfig,
+    request: ReceivedAuthnRequest,
+): SpInitiatedPlan {
+    if (!request.id) {
+        throw new Error("AuthnRequest has no ID, so there is nothing to set InResponseTo to");
+    }
+
+    const config = structuredClone(base);
+    const warnings: string[] = [];
+
+    config.inResponseTo = request.id;
+    config.relayState = request.relayState;
+
+    const acsSource: ValueSource = request.assertionConsumerServiceURL ? "request" : "config";
+    if (request.assertionConsumerServiceURL) {
+        if (request.assertionConsumerServiceURL !== base.sp.assertionConsumerServiceURL) {
+            warnings.push(
+                `The request's ACS URL (${request.assertionConsumerServiceURL}) differs from the config (${base.sp.assertionConsumerServiceURL}). Using the request's.`,
+            );
+        }
+        config.sp.assertionConsumerServiceURL = request.assertionConsumerServiceURL;
+    }
+
+    const audienceSource: ValueSource = request.issuer ? "request" : "config";
+    if (request.issuer) {
+        if (request.issuer !== base.sp.entityId) {
+            warnings.push(
+                `The request's issuer (${request.issuer}) differs from the config's SP entity ID (${base.sp.entityId}). Using the issuer as the Audience.`,
+            );
+        }
+        config.sp.entityId = request.issuer;
+    }
+
+    if (request.protocolBinding && request.protocolBinding !== HTTP_POST_BINDING) {
+        warnings.push(
+            `The request asks for ${request.protocolBinding}, but only HTTP-POST is supported. The Response will be POSTed.`,
+        );
+    }
+
+    return { config, acsSource, audienceSource, warnings };
+}
+
+/** What the receiver UI shows before sending a Response for an SP-initiated login. */
+export type SpResponsePreview =
+    | { status: "no-config"; configPath: string }
+    | { status: "error"; configPath: string; error: string }
+    | {
+          status: "ready";
+          configPath: string;
+          requestId: string;
+          acsUrl: string;
+          acsSource: ValueSource;
+          audience: string;
+          audienceSource: ValueSource;
+          idpEntityId: string;
+          nameId: string;
+          relayState?: string;
+          signResponse: boolean;
+          signAssertion: boolean;
+          warnings: string[];
+      };
+
+/**
+ * Load the response config and plan a Response for the given AuthnRequest.
+ * Builds (and signs) the Response once as a dry run, so problems like a
+ * missing key surface in the preview instead of on click.
+ */
+export async function previewSpInitiatedResponse(
+    request: ReceivedAuthnRequest,
+    configPath: string = DEFAULT_RESPONSE_CONFIG_PATH,
+): Promise<SpResponsePreview> {
+    try {
+        const plan = planSpInitiatedResponse(await loadResponseConfig(configPath), request);
+        buildAndSignResponse(plan.config);
+        const { config } = plan;
+        return {
+            status: "ready",
+            configPath,
+            requestId: config.inResponseTo!,
+            acsUrl: config.sp.assertionConsumerServiceURL,
+            acsSource: plan.acsSource,
+            audience: config.sp.entityId,
+            audienceSource: plan.audienceSource,
+            idpEntityId: config.idp.entityId,
+            nameId: config.subject.nameId,
+            relayState: config.relayState,
+            signResponse: config.signing.signResponse,
+            signAssertion: config.signing.signAssertion,
+            warnings: plan.warnings,
+        };
+    } catch (err) {
+        if (err instanceof ResponseConfigNotFoundError) return { status: "no-config", configPath };
+        return { status: "error", configPath, error: (err as Error).message };
+    }
 }

@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 import { parseArgs } from "node:util";
-import { resolve, dirname, isAbsolute } from "node:path";
-import { existsSync } from "node:fs";
 import type { SAMLResponseConfig } from "./response-config";
 import {
     buildAndSignResponse,
     encodeForPost,
     buildPostForm,
+    loadResponseConfig,
+    ResponseConfigNotFoundError,
 } from "./saml-response-lib";
 
 const HELP = `
@@ -56,28 +56,18 @@ async function main() {
         process.exit(0);
     }
 
-    const configPath = resolve(values.config as string);
-    if (!existsSync(configPath)) {
-        console.error(`✖ Config not found at ${configPath}`);
-        console.error(`  Generate one with: bun run response:init`);
+    let config: SAMLResponseConfig;
+    try {
+        config = await loadResponseConfig(values.config as string);
+    } catch (err) {
+        if (err instanceof ResponseConfigNotFoundError) {
+            console.error(`✖ ${err.message}`);
+            console.error(`  Generate one with: bun run response:init`);
+        } else {
+            console.error(`✖ ${(err as Error).message}`);
+        }
         process.exit(1);
     }
-
-    const mod = await import(configPath);
-    const config: SAMLResponseConfig =
-        mod.responseConfig ?? mod.default ?? mod.config;
-
-    if (!config) {
-        console.error(`✖ Config file ${configPath} must export 'responseConfig' (or default).`);
-        process.exit(1);
-    }
-
-    // Resolve cert/key paths relative to the config file (so configs are portable).
-    const configDir = dirname(configPath);
-    const resolveRel = (p: string | undefined) =>
-        p && !isAbsolute(p) ? resolve(configDir, p) : p;
-    config.idp.certificatePath = resolveRel(config.idp.certificatePath);
-    config.idp.privateKeyPath = resolveRel(config.idp.privateKeyPath);
 
     // CLI overrides
     if (values.destination) config.sp.assertionConsumerServiceURL = values.destination as string;
