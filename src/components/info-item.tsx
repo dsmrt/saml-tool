@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export function InfoItem({ label, children }: { label: string; children: ReactNode }) {
+export function InfoItem({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/40 p-3">
       <div className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">{label}</div>
